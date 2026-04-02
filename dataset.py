@@ -50,6 +50,7 @@ SAMPLE_POSTS = [
     "This is fine",
     "So excited for the weekend",
     "I am not happy about this",
+    
 ]
 
 # Human labels for each post above.
