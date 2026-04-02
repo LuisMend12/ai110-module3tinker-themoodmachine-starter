@@ -4,7 +4,7 @@ Contains the core classes for the pet care management system.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 
 @dataclass
@@ -15,6 +15,7 @@ class Task:
     scheduled_at: datetime
     notes: str = ""
     completed: bool = False
+    recur_daily: bool = False   # if True, completing spawns a task for next day
 
     def mark_complete(self) -> None:
         """Mark this task as done."""
@@ -39,9 +40,16 @@ class Pet:
         """Return all tasks for this pet."""
         return self.tasks
 
+    def get_tasks_sorted(self) -> list[Task]:
+        """Return all tasks sorted chronologically by scheduled_at."""
+        return sorted(self.tasks, key=lambda t: t.scheduled_at)
+
     def get_tasks_for_date(self, target_date: date) -> list[Task]:
-        """Return tasks scheduled on a specific date."""
-        return [t for t in self.tasks if t.scheduled_at.date() == target_date]
+        """Return tasks scheduled on a specific date, in chronological order."""
+        return sorted(
+            [t for t in self.tasks if t.scheduled_at.date() == target_date],
+            key=lambda t: t.scheduled_at,
+        )
 
     def __repr__(self) -> str:
         return f"Pet(name={self.name!r}, species={self.species!r}, breed={self.breed!r}, age={self.age})"
@@ -81,16 +89,49 @@ class Schedule:
         """Add a pet to this schedule."""
         self.pets.append(pet)
 
-    def schedule_walk(self, pet: Pet, scheduled_at: datetime, notes: str = "") -> Task:
-        """Create a walk task for a pet and attach it."""
+    def has_conflict(self, pet: Pet, scheduled_at: datetime) -> bool:
+        """Return True if the pet already has a task at the exact same datetime."""
+        return any(t.scheduled_at == scheduled_at for t in pet.get_tasks())
+
+    def schedule_walk(
+        self,
+        pet: Pet,
+        scheduled_at: datetime,
+        notes: str = "",
+        recur_daily: bool = False,
+    ) -> Task:
+        """Create a walk task for a pet and attach it.
+
+        Raises ValueError if the pet already has a task at that exact time.
+        """
+        if self.has_conflict(pet, scheduled_at):
+            raise ValueError(
+                f"{pet.name} already has a task at {scheduled_at.isoformat()}"
+            )
         task = Task(
             title=f"Walk {pet.name}",
             task_type="walk",
             scheduled_at=scheduled_at,
             notes=notes,
+            recur_daily=recur_daily,
         )
         pet.add_task(task)
         return task
+
+    def complete_task(self, pet: Pet, task: Task) -> Task | None:
+        """Mark a task complete. If it recurs daily, create and return the next occurrence."""
+        task.mark_complete()
+        if task.recur_daily:
+            next_task = Task(
+                title=task.title,
+                task_type=task.task_type,
+                scheduled_at=task.scheduled_at + timedelta(days=1),
+                notes=task.notes,
+                recur_daily=True,
+            )
+            pet.add_task(next_task)
+            return next_task
+        return None
 
     def get_todays_tasks(self) -> list[Task]:
         """Return all tasks across all pets scheduled for today."""

@@ -65,3 +65,27 @@ During this lab you will:
 - When debugging, print tokens, scores, or intermediate choices.
 - Ask an AI assistant to help create edge case posts or unusual wording.
 - Try examples that mislead or confuse your model. Failure cases teach you the most.
+
+---
+
+## Testing PawPal+
+
+Run the full test suite with:
+
+```bash
+python -m pytest
+```
+
+The suite lives in `tests/test_pawpal.py` and covers 25 test cases across five areas:
+
+| Area | What is tested |
+|---|---|
+| **Owner** | Add/remove pets, empty owner, safe removal of non-existent pet |
+| **Pet** | Add tasks, pet with no tasks, date-based task filtering |
+| **Sorting** | Tasks returned in chronological order from `get_tasks_sorted()` and `get_tasks_for_date()` |
+| **Conflict detection** | `has_conflict()` flag, `schedule_walk` raises `ValueError` on duplicate time, conflicts are per-pet |
+| **Recurrence** | Completing a `recur_daily` task spawns next-day task, non-recurring returns `None`, chaining works |
+
+**Confidence level: ★★★★☆**
+
+The core logic (add pet, schedule walk, sort tasks, detect conflicts, recur daily) is well-covered with both happy-path and edge-case tests. The main gap is the Streamlit UI layer (`app.py`), which requires browser-level integration testing not covered here.
